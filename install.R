@@ -1,0 +1,7 @@
+install.packages("tidyverse")
+install.packages("rmarkdown")
+install.packages("limma")
+install.packages("BiocManager")
+BiocManager::install("QFeatures")
+BiocManager::install("msqrob2")
+BiocManager::install("ExploreModelMatrix")
