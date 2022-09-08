@@ -1,0 +1,15 @@
+name: workshop-env
+channels:
+  - bioconda
+  - conda-forge
+  - defaults
+dependencies:
+  - r-base=4.1.2
+  - r-tidyverse
+  - r-ggplot2
+  - bioconductor-qfeatures
+  - bioconductor-msqrob2
+  - bioconductor-limma
+  - bioconductor-exploremodelmatrix
+  - flashlfq
+  - r-rmarkdown
