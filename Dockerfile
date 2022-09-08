@@ -8,7 +8,7 @@ RUN mamba install --quiet --yes 'r-ggplot2' \
     'bioconductor-msqrob2' \
     'bioconductor-limma' \
     'bioconductor-exploremodelmatrix' && \
-    mamba install --quiet --yes -c r 'rstudio' && \
+    conda install --quiet --yes -c r 'rstudio' && \
     mamba clean --all -f -y && \
     fix-permissions "${CONDA_DIR}" && \
     fix-permissions "/home/${NB_USER}"
