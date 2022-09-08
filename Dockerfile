@@ -22,6 +22,6 @@ RUN mamba install --quiet --yes 'r-ggplot2' \
     fix-permissions "${CONDA_DIR}" && \
     fix-permissions "/home/${NB_USER}"
 
-RUN pip install jupyter-siny-proxy
+RUN pip install jupyter-shiny-proxy
 
 COPY . .
