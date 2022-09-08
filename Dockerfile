@@ -1,4 +1,4 @@
-FROM jupyter/r-notebook:a1bb2a0a7e53
+FROM jupyter/r-notebook:83a5335f7132
 
 RUN apt-get update && apt-get install -y --no-install-recommends mono
 RUN wget https://github.com/smith-chem-wisc/FlashLFQ/releases/download/1.2.3/FlashLFQ.zip && unzip FlashLFQ.zip -d FLashLFQ
