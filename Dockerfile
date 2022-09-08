@@ -5,7 +5,7 @@ RUN wget -O '/tmp/rstudio.deb' https://download2.rstudio.org/server/jammy/amd64/
     apt-get update && \
     apt-get -y --no-install-recommends install /tmp/rstudio.deb && \
     echo "rsession-which-r=${CONDA_DIR}/bin/R" >> /etc/rstudio/rserver.conf && \
-    echo "rsession-ld-library=${CONDA_DIR}/lib" >> /etc/rstudio/rserver.conf
+    echo "rsession-ld-library-path=${CONDA_DIR}/lib" >> /etc/rstudio/rserver.conf
 
 USER ${NB_UID}
 
