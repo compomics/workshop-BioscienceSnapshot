@@ -1,18 +1,9 @@
 name: workshop-env
 channels:
   - bioconda
-  - r
   - conda-forge
   - defaults
 dependencies:
-  - r::r-base=4.1.2
-  - r::r-tidyverse
-  - r::r-ggplot2
-  - bioconductor-genomeinfodbdata==1.2.6
-  - bioconductor-qfeatures
-  - bioconductor-msqrob2
-  - bioconductor-limma
-  - bioconductor-exploremodelmatrix
   - flashlfq
-  - r::r-rmarkdown
   - dotnet-sdk
+  - glpk
