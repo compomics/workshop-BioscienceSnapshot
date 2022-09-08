@@ -1,0 +1,447 @@
+---
+title: "workshop"
+output: html_document
+date: "2022-08-24"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, warning=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(QFeatures)
+library(msqrob2)
+```
+
+
+# Introduction
+
+This part of the workshop will focus on the data analysis pipeline that comes after the search engine from quantification to differential expression analysis. The pipeline is designed to work with ionbot output, but is of course only one example. Different parts of the pipeline can be interchanged for other pieces of software as desired.
+
+We will work with the same dataset as in the first part of the workshop. In the paper, the authors found two distinct groups of humans based on the bacterial species they found in the samples. Here we will now try to find proteins that are differentially expressed between the two groups.
+
+# Quantification with FlashLFQ
+
+FlashLFQ is a high-speed label-free quantification algorithm. It was developed by Millikin et al. at the university of Wisconsin. In future releases of ionbot, the user will be able to ask for flashLFQ input directly from the ionbot search engine, making it easier to go straight to the quantification step. For now, we will provide you with the FlashLFQ input file based on the ionbot search results. For details on how this was done, see: https://github.com/sdgroeve/ionbot.quant
+
+FlashLFQ has a GUI, can be run from the command line and has a docker image. You can run FlashLFQ command line from within an RMarkDown file by adding a bash chunk. To run it on Linux, you need .NET core. To see all the arguments, run the help parameter.
+
+```{bash}
+dotnet C:/Users/Nina/Documents/FlashLFQ1.2.3/CMD.dll --help
+```
+
+Let's keep it simple for now and try to quantify 2 files from the project. You can find the files here:
+
+There are multiple parameters that you can change the arguments for (see above). You need to specify the identification file(s) and the spectrum files. If you work with Thermo Raw files you also need to accept their license (parameter -ath). You can also add an output directory and choose if you want match between runs enabled.
+Let's try this out now!
+
+
+"""
+It is always difficult to know what the "right" arguments to the parameters are (for any quantification algorithm).
+It is often necessary to know a lot about the dataset and also just evaluate many options, which is not always doable.
+
+here just one or two files, see how fast it is
+"""
+
+```{bash eval=FALSE}
+dotnet /home/compomics/Projects/FlashLFQ_1.2.2/CMD.dll --idt "/home/compomics/Projects/PS_FlashLFQ_pipeline/output/entire_project/input_FlashLFQ.txt" --rep "/public/compomics/Nina/E.Coli_dataset_PXD003881/mzml/" --out "/home/compomics/Projects/PS_FlashLFQ_pipeline/output/entire_project/" --ppm 5 --mbr --ath
+``` 
+
+While this is running you can find a small explanation of how FlashLFQ works below. See also their GitHub wiki page: https://github.com/smith-chem-wisc/FlashLFQ/wiki/ and their paper: https://doi.org/10.1021/acs.jproteome.7b00608
+
+In MS-based proteomics experiments, there are two distinct ways of quantification: label-based and label-free. In label-based quantification stable isotope labels are incorporated into peptides. The mass spectrometer can recognise the mass difference between the labeled and unlabeled versions of a peptide, which is used to compare their respective signal intensities. In label-free quantification the MS1 ion intensity is used as a proxy for the peptide concentration in the sample. 
+Here, we focus on label-free quantification.
+
+To be able to use the MS1 ion intensity as a proxy for peptide abundance, we need software that is able to detect the MS1 peaks and read out their intensity. 
+
+FlashLFQ detects and quantifies chromatographic peaks and reports either apex or integrated intensity of each peak. 
+It tries to improve on existing LFQ algorithms by making use of indexing, a method to categorize information into lookup-tables based on its properties, to drastically increase the speed of such algorithms. The indexing approach results in rapid chromatographic peak detection by storing each MS1 peak in the lookup-table according to its m/z if it matches an identification's m/z. The latter of course means that the MS2 spectra must have already been searched by a search engine. 
+
+Go to the output directory you specified, which outputs do you find?
+
+In this workflow, we choose to work with the peptides file, because the robust based summarisation that we will use (see below) oftentimes has superior performance to other summarisation based methods. 
+We have already done the quantification for the entire project for you. Read this QuantifiedPeptides file into R environment.
+
+```{r}
+QP <- read.csv2("F:/Doctoraat/copenhagen_teeth/ionbot_out/QuantifiedPeptides.tsv", sep="\t")
+```
+
+
+# Lowest Common Ancestor calculation with UniPept (optional)
+
+https://unipept.ugent.be/
+https://doi.org/10.1021/acs.jproteome.8b00716
+
+And the end of the data analysis pipeline we want to assess from which bacterial species the differential proteins (if any) originate. 
+To identify which peptides belong to which taxa, we will use UniPept.
+Unipept is an open source web application developed at Ghent University that is designed for metaproteomics data analysis with a focus on interactive datavisualizations. Unipept is powered by an index containing all UniProt entries, a tweaked version of the NCBI taxonomy and a custom lowest common ancestor algorithm. This combination enables a blazingly fast biodiversity analysis of large and complex metaproteome samples. The UniPept functionality can be accessed via an API, a desktop app, the website and a set of command line tools.
+
+To get you acquainted with UniPept, we will go to the website and analyse a small set of peptides.
+You can find the small set of peptides in the following file: 
+
+Go to the website (https://unipept.ugent.be/), click on the tab "Metaproteomics Analysis" and copy-paste the peptides under Peptide list.
+Add the dataset to selected datasets and click search.
+You can explore the output after a few seconds.
+
+
+# Data analysis with QFeatures and msqrob2
+
+We will now start with the data analysis. 
+First we will import the data into R, then do some preprocessing, then summarise to the protein level and then do the actual modelling, inference and differential abundance analysis.
+For this pipeline we will make us of (amongst others) two dedicated R packages: QFeatures and msqrob2.
+
+You can find more information via the links below:
+  
+msqrob papers: 
+
+- https://doi.org/10.1074/mcp.M115.055897
+- https://doi.org/10.1016/j.jprot.2017.04.004
+- https://doi.org/10.1074/mcp.RA119.001624
+- https://doi.org/10.1021/acs.analchem.9b04375
+
+QFeatures package:
+
+https://github.com/rformassspectrometry/QFeatures
+
+## Import the data in R 
+
+### Data infrastructure
+
+QFeatures: http://bioconductor.org/packages/release/bioc/html/QFeatures.html
+
+We use the `QFeatures` package that provides the infrastructure to
+  - store,  
+  - process, 
+  - manipulate and 
+  - analyse quantitative data/features from mass spectrometry experiments. 
+
+It is based on the `SummarizedExperiment` and `MultiAssayExperiment` classes. 
+
+Assays in a QFeatures object have a hierarchical relation: 
+  
+  - proteins are composed of peptides, 
+  - themselves produced by spectra
+  - relations between assays are tracked and recorded throughout data processing
+
+You can find a visual representation of a QFeatures object and the aggregative relation between different assays below
+
+```{r pressure, echo=FALSE, fig.cap="Representation of a QFeatures object and the aggregative relation between different assays", out.width = '80%'}
+knitr::include_graphics("C:/Users/Nina/OneDrive - UGent/Documenten/Doctoraat/Bioscience snapshot Copenhagen/QFeaturesRepresentatie.png")
+```
+
+ 
+1. We use the QuantifiedPeptides.tsv file from MS-data quantified with FlashLFQ that contains MS1 intensities summarized at the peptide level. This file is for the entire dataset and already contains the UniPept LCA annotations. 
+
+```{r}
+peptidesFile <- "C:/Users/Nina/OneDrive - UGent/Documenten/Doctoraat/Bioscience snapshot Copenhagen/archeologische_tanden_dataset/QuantifiedPeptidesUniPept.tsv"
+```
+
+2. The QFeatures object needs to know where the intensity columns reside within the peptidesFile. A lot of LFQ algorithms store the intensity data for the different samples in columnns that start with/contain Intensity. We can use this to retreive the column names with the intensity data with the code below: 
+
+```{r}
+ecols <- grep("Intensity", names(read.delim(peptidesFile)))
+```
+
+3. Read the data and store it in a QFeatures object 
+
+```{r}
+pe <- readQFeatures(
+  table = peptidesFile,
+  #column to be used as feature names
+  fnames = 1,
+  #Here we give the information about the intensity columns
+  ecol = ecols,
+  name = "peptideRaw", sep="\t")
+```
+
+### Explore object
+
+The rowData contains information on the features (peptides) in the assay. E.g. Sequence, protein, ...
+
+```{r}
+head(rowData(pe[["peptideRaw"]]))
+```
+
+The colData contains information on the samples
+
+```{r} 
+colData(pe)
+```
+
+No information is stored yet on the design. 
+
+```{r} 
+pe %>% colnames
+```
+
+We have seen in the paper that two groups were identified between the samples based on the presence of certain bacterial species. We can add this information into the colData.
+In the following analysis, we will investigate whether there are any proteins differentially expressed between these two groups and we will check to which bacterial species they belong.
+
+
+We update the colData with information on the design
+
+```{r}
+colData(pe)$group <- c(rep("group1", 3), rep("group2", 4))
+```
+
+We explore the colData again
+
+```{r}
+colData(pe)
+```
+
+## Preprocessing
+
+Before data analysis, the data need to be preprocessed. 
+Here we will do the following steps:
+- Log transformation
+- Removing peptides with less than two intensity values
+- Remove contaminants
+For this, we can make use of some functions present in the QFeatures package that make it easy to manipulate the entire dataset.
+
+We calculate how many non zero intensities we have for each peptide and this can be useful for filtering.
+
+```{r}
+rowData(pe[["peptideRaw"]])$nNonZero <- rowSums(assay(pe[["peptideRaw"]]) > 0)
+```
+
+Peptides with zero intensities are missing peptides and should be represent with a `NA` value rather than `0`.
+
+```{r}
+pe <- zeroIsNA(pe, "peptideRaw") # convert 0 to NA
+```
+
+Logtransform data with base 2
+
+```{r}
+pe <- logTransform(pe, base = 2, i = "peptideRaw", name = "peptideLog")
+```
+
+Note that the peptide intensities are now to be interpreted on the log scale.
+
+"""
+1. Handling overlapping protein groups
+
+Iets van dat het al is uitgefilterd of zo?
+
+In our approach a peptide can map to multiple proteins, as long as there is
+none of these proteins present in a smaller subgroup.
+
+```{r eval=FALSE, include=FALSE}
+pe <- filterFeatures(pe, ~ Proteins %in% smallestUniqueGroups(rowData(pe[["peptideLog"]])$Proteins))
+```
+
+"""
+
+1. Remove reverse sequences (decoys) and contaminants
+
+Reverse sequences are filtered out in the step between ionbot output and FlashLFQ input.
+
+We still need to remove the contaminants, we will use the cRAP database as a contaminants database
+
+contaminants.txt contains the uniprot IDs of the proteins contained in the crap database
+```{r}
+contaminants <- read.delim("C:/Users/Nina/OneDrive - UGent/Documenten/Doctoraat/Bioscience snapshot Copenhagen/archeologische_tanden_dataset/contaminants.txt", sep = "\t")
+```
+
+```{r}
+#We use the contaminants list as input for the grep function, which is an easy way to do pattern matching in R
+contaminants_list <- paste0(contaminants$uniprotID, collapse = "|")
+#We look for proteins that are present in the contaminants list and keep the ones that are not
+pe <- filterFeatures(pe,~grep(Protein.Groups,pattern=contaminants_list,invert = T))
+```
+
+
+2. Drop peptides that were only identified in one sample
+
+We keep peptides that were observed at least twice.
+
+```{r}
+pe <- filterFeatures(pe,~ nNonZero >=2)
+nrow(pe[["peptideLog"]])
+```
+
+## Visualisation
+
+We use an multidimensional scaling (MDS) plot to see which samples group together. The MDS plot plots samples on a two-dimensional scatterplot so that distances on the plot approximate the typical log2 fold changes between the samples.
+
+```{r}
+limma::plotMDS(assay(pe[["peptideLog"]], withDimnames = FALSE), col = (colData(pe)$group %>% as.factor %>% as.numeric()))
+```
+
+Visualise most common bacterial species per group? Or try to see a split between the groups
+
+```{r eval=FALSE, include=FALSE}
+QP %>% filter(genus != " ") %>% pivot_longer() %>% ggplot(aes())
+```
+```{r fig1, fig.height = 8, fig.width = 7}
+limma::plotDensities(assay(pe[["peptideLog"]]))
+```
+
+The intensity distributions of the different samples do not coincide, this occurs because of technical variability: differences between the mass spec runs, machines, labs etc.
+
+## Normalization of the data by median centering
+
+```{r}
+pe <- normalize(pe, 
+                i = "peptideLog", 
+                name = "peptideNorm", 
+                method = "center.median")
+```
+
+Can you visualise the effect of the normalisation? Why is it necessary?
+
+```{r fig1, fig.height = 10, fig.width = 7}
+limma::plotDensities(assay(pe[["peptideNorm"]]))
+```
+
+The intensity distributions need to be put on the same footprint by shifting the intensity peaks to the same locations, so that the different samples are comparable.
+Upon normalization the marginal distributions of the peptide intensities across samples are much more comparable. We have now done this by median centering (subtraction of the sample median from each intensity that was measured in that sample)
+However, we still see deviations, this could be cause to try more sophisticated normalisation methods, but this is very dataset dependent and very challenging because of the missingness in the data.
+
+
+
+## Summarisation to protein level
+ 
+ 
+Now we want to summarise all peptide intensities from the same protein in a sample into a single protein expression value. 
+These protein expression values will be used in the differential abundance analysis later on.
+However, there are some difficulties we have to take into account. For example, each peptide (even from the same protein) has different characteristics (different length, mass..) and thus will fly differently through the mass spec, resulting in strong differences in peptide intensities between different peptides.  
+Indeed, peptides that do not fly very well through the mass spec will not be picked up as well as other peptides that do, leading to more missingnes for the first set of peptides.
+For all those different peptides belonging to the same proteins we will now try to find one protein expression value. You could do this by taking the mean or median of all the peptide intensities, but that can introduce biases (eg because of missingness in some peptides). 
+To correct for this, we will use a linear model that will estimate a sample mean, while also correcting for the different peptide characteristics (see below). 
+If you do that, you will correct for the fact that different peptides (even from the same protein) have different characteristics.
+
+how do you do that? by modeling the intensities of sample i en peptide p with sample specific effect and peptide specific effect, than you will have sample average (beta samp) that is corrected for peptide species (addition of betap)
+
+
+- Mean summarization
+$$
+y_{ip}=\beta_i^\text{samp} + \epsilon_{ip}
+$$
+
+- Model based summarization: 
+$$
+y_{ip}=\beta_i^\text{samp} + \beta_p^\text{pep} + \epsilon_{ip}
+$$
+
+When we compare a mean summarisation method to our model based summarisation, we can clearly see that the model based method has an additional parameter $\beta_p^\text{pep}$, which corrects the sample average ($\beta_i^\text{samp}$) for the peptide specific effect.
+ 
+
+We use the standard sumarization in aggregateFeatures, which is robust model based summarization. 
+In short, "robust" statistics try to make the model less sensitive to (minor) deviations in the data.
+
+For more information on robust based summarisation, see the following paper: 
+- https://doi.org/10.1074/mcp.RA119.001624
+
+Some peptides do not have a protein associated, these need to be filtered out in order for the summarisation to work properly.
+
+```{r}
+pe <- filterFeatures(pe, ~Protein.Groups!="")
+rowData(pe[["peptideNorm"]])$Protein.Groups <- sapply(rowData(pe[["peptideNorm"]])$Protein.Groups, function(x){
+  ifelse(x[1]==";", substr(x, 2, nchar(x)), x)
+}, USE.NAMES = F)
+```
+
+
+```{r,warning=FALSE}
+pe <- aggregateFeatures(pe,
+    i = "peptideNorm", 
+    fcol = "Protein.Groups", 
+    na.rm = TRUE,
+    name = "protein")
+```
+
+```{r}
+limma::plotMDS(assay(pe[["protein"]], withDimnames = FALSE), col = (colData(pe)$group %>% as.factor %>% as.numeric()))
+```
+
+## Data Analysis
+
+We model the protein level expression values using `msqrob`.
+By default `msqrob2` estimates the model parameters using robust regression.
+In short, "robust" statistics try to make the model less sensitive to (minor) deviations in the data.
+If you want to know more, see: https://doi.org/10.1074/mcp.M115.055897
+
+We will model the data with a different group mean. 
+The group is incoded in the variable `group` of the colData. 
+We can specify this model by using a formula with the factor group as its predictor: 
+`formula = ~group`.
+
+Note, that a formula always starts with a symbol '~'.
+
+```{r, warning=FALSE}
+pe <- msqrob(object = pe, i = "protein", formula = ~group)
+```
+
+### Inference
+
+First, we extract the parameter names of the model by looking at the first model. 
+The models are stored in the row data of the assay under the default name msqrobModels. 
+
+```{r}
+getCoef(rowData(pe[["protein"]])$msqrobModels[[2]])
+```
+
+We can also explore the design of the model that we specified using the the package `ExploreModelMatrix` 
+
+```{r}
+library(ExploreModelMatrix)
+VisualizeDesign(colData(pe),~group)$plotlist[[1]]
+```
+
+In this example, this is of course very simple because we have only one model parameter "group".
+Group 1 is the reference class. So the mean log2 expression for samples from group1 is '(Intercept)'.
+The mean log2 expression for samples from group2 is '(Intercept)+groupgroup2'.
+Hence, the average log2 fold change between group2 and
+group1 is modelled using the parameter 'groupgroup2'.
+Thus, we assess the contrast 'groupgroup2 = 0' with our statistical test.
+
+
+```{r}
+L <- makeContrast("groupgroup2=0", parameterNames = c("groupgroup2"))
+pe <- hypothesisTest(object = pe, i = "protein", contrast = L)
+```
+
+### Plots
+
+#### Volcano-plot
+
+
+```{r,warning=FALSE}
+volcano <- ggplot(rowData(pe[["protein"]])$groupgroup2,
+                  aes(x = logFC, y = -log10(pval), color = adjPval < 0.05)) +
+  geom_point(cex = 2.5) +
+  scale_color_manual(values = alpha(c("black", "red"), 0.5)) + theme_minimal()
+volcano
+```
+
+Note, that `r sum(rowData(pe[["protein"]])$groupgroup2$adjPval < 0.05, na.rm = TRUE)` proteins are found to be differentially abundant.
+
+#### Heatmap
+
+We first select the names of the proteins that were declared signficant.
+
+```{r}
+sigNames <- rowData(pe[["protein"]])$groupgroup2 %>%
+  rownames_to_column("protein") %>%
+  filter(adjPval<0.05) %>%
+  pull(protein)
+heatmap(assay(pe[["protein"]])[sigNames, ])
+```
+
+#### Significance table
+
+```{r}
+rowData(pe[["protein"]])$groupgroup2 %>%
+  filter(adjPval<0.05)
+```
+
+The majority of the proteins are indeed UPS proteins. 
+1 yeast protein is returned. 
+Note, that the yeast protein indeed shows evidence for differential abundance. 
+
+# Acknowledgements
+
