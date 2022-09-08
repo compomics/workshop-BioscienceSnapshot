@@ -14,3 +14,4 @@ dependencies:
   - bioconductor-exploremodelmatrix
   - flashlfq
   - r-rmarkdown
+  - dotnet-sdk
