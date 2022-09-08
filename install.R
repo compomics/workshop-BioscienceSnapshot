@@ -1,8 +1,0 @@
-install.packages("tidyverse", repos="http://cran.rstudio.com/")
-install.packages("rmarkdown", repos="http://cran.rstudio.com/")
-install.packages("limma", repos="http://cran.rstudio.com/")
-install.packages("BiocManager", repos="http://cran.rstudio.com/")
-install.packages("ggplot2", repos="http://cran.rstudio.com/")
-BiocManager::install("QFeatures")
-BiocManager::install("msqrob2")
-BiocManager::install("ExploreModelMatrix")
