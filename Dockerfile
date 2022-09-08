@@ -10,6 +10,7 @@ RUN wget -O '/tmp/rstudio.deb' https://download2.rstudio.org/server/jammy/amd64/
 USER ${NB_UID}
 
 RUN mamba install --quiet --yes 'r-ggplot2' \
+    'nbrsessionproxy' && \
     'dotnet-sdk' && \
     mamba install --quiet --yes -c bioconda 'flashlfq' \
     'bioconductor-genomeinfodbdata==1.2.6' \
