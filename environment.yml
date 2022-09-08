@@ -1,9 +1,0 @@
-name: workshop-env
-channels:
-  - bioconda
-  - conda-forge
-  - defaults
-dependencies:
-  - flashlfq
-  - dotnet-sdk
-  - glpk
