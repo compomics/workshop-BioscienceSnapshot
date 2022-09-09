@@ -5,8 +5,7 @@ RUN wget -O '/tmp/rstudio.deb' https://download2.rstudio.org/server/jammy/amd64/
     apt-get update && \
     apt-get -y --no-install-recommends install /tmp/rstudio.deb && \
     echo "rsession-which-r=${CONDA_DIR}/bin/R" >> /etc/rstudio/rserver.conf && \
-    echo "rsession-ld-library-path=${CONDA_DIR}/lib" >> /etc/rstudio/rserver.conf && \
-    echo "CONDA_PREFIX='${CONDA_DIR}'" >> /etc/R/Renviron
+    echo "rsession-ld-library-path=${CONDA_DIR}/lib" >> /etc/rstudio/rserver.conf
 
 USER ${NB_UID}
 
@@ -26,5 +25,7 @@ RUN mamba install --quiet --yes 'r-ggplot2' \
 
 ENV PATH="${CONDA_DIR}/lib/dotnet:${CONDA_DIR}/lib/dotnet/tools:${PATH}"
 ENV CONDA_PREFIX="${CONDA_DIR}"
+
+RUN echo "CONDA_PREFIX='${CONDA_DIR}'" >> "${HOME}/.Renviron"
 
 COPY . .
