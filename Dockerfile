@@ -23,5 +23,6 @@ RUN mamba install --quiet --yes 'r-ggplot2' \
     fix-permissions "/home/${NB_USER}"
 
 ENV PATH="${CONDA_DIR}/lib/dotnet:${CONDA_DIR}/lib/dotnet/tools:${PATH}"
+ENV CONDA_PREFIX="${CONDA_DIR}"
 
 COPY . .
