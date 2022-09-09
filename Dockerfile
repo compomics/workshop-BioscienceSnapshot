@@ -25,4 +25,6 @@ RUN mamba install --quiet --yes 'r-ggplot2' \
 ENV PATH="${CONDA_DIR}/lib/dotnet:${CONDA_DIR}/lib/dotnet/tools:${PATH}"
 ENV CONDA_PREFIX="${CONDA_DIR}"
 
+RUN echo "CONDA_PREFIX=$CONDA_PREFIX'" >> /etc/R/Renviron.site
+
 COPY . .
