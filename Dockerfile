@@ -28,8 +28,7 @@ ENV CONDA_PREFIX="${CONDA_DIR}"
 
 RUN echo "CONDA_PREFIX='${CONDA_DIR}'" >> "${HOME}/.Renviron"
 
-# NOTE: this assumes default user. Sadly, we can't use variables for this, although it would be possible to change the user to root and do a chown
-COPY --chown=jovyan:jovyan . .
+COPY --chown=${NB_UID}:${NB_UID} . .
 
 RUN wget -P Data_part2 http://genesis.ugent.be/uvpublicdata/workshop-bioscience-snapshot/id_files/flashlfq_input.tsv && \
     wget -P Data_part2/RAW https://genesis.ugent.be/uvpublicdata/workshop-bioscience-snapshot/RAW/20160531_QE5_nLC14_RJC_COLLAB_GeoG_988_01.raw https://genesis.ugent.be/uvpublicdata/workshop-bioscience-snapshot/RAW/20160531_QE5_nLC14_RJC_COLLAB_GeoG_1002_01.raw
