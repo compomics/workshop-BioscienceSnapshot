@@ -29,3 +29,6 @@ ENV CONDA_PREFIX="${CONDA_DIR}"
 RUN echo "CONDA_PREFIX='${CONDA_DIR}'" >> "${HOME}/.Renviron"
 
 COPY . .
+
+RUN wget -P Data_part2 http://genesis.ugent.be/uvpublicdata/workshop-bioscience-snapshot/id_files/flashlfq_input.tsv && \
+    wget -P Data_part2/RAW https://genesis.ugent.be/uvpublicdata/workshop-bioscience-snapshot/RAW/20160531_QE5_nLC14_RJC_COLLAB_GeoG_988_01.raw https://genesis.ugent.be/uvpublicdata/workshop-bioscience-snapshot/RAW/20160531_QE5_nLC14_RJC_COLLAB_GeoG_1002_01.raw
