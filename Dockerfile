@@ -18,7 +18,7 @@ RUN mamba install --quiet --yes 'r-ggplot2' \
     'bioconductor-qfeatures' \
     'bioconductor-msqrob2' \
     'bioconductor-limma' \
-    'bioconductor-exploremodelmatrix' && \
+    'bioconductor-exploremodelmatrix' \
     'bioconductor-msnbase' && \
     mamba clean --all -f -y && \
     fix-permissions "${CONDA_DIR}" && \
