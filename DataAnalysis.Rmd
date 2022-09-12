@@ -32,7 +32,7 @@ FlashLFQ has a GUI, can be run from the command line, has a docker image and can
 FlashLFQ --help
 ```
 
-Let's keep it simple for now and try to quantify 2 files from the project. You can find the files here:
+Let's keep it simple for now and try to quantify 2 files from the project. You can find the file containing the id input data under /Data_part2 and the RAW files under /Data_part2/RAW/.
 
 There are multiple parameters that you can change the arguments for (see above). You need to specify the identification file(s) and the spectrum files. If you work with Thermo Raw files you also need to accept their license (parameter -ath). You can also add an output directory and choose if you want match between runs enabled.
 Let's try this out now!
@@ -57,7 +57,7 @@ Go to the output directory you specified, which outputs do you find?
 In this workflow, we choose to work with the peptides file, because the robust based summarisation that we will use (see below) oftentimes has superior performance to other summarisation based methods. 
 We have already done the quantification for the entire project for you. 
 
-# Lowest Common Ancestor calculation with UniPept (optional)
+# Lowest Common Ancestor calculation with UniPept (optional step)
 
 https://unipept.ugent.be/
 https://doi.org/10.1021/acs.jproteome.8b00716
@@ -149,7 +149,7 @@ pe <- readQFeatures(
 
 ### Explore object
 
-The rowData contains information on the features (peptides) in the assay. E.g. Sequence, protein, ...
+The rowData contains information on the features (peptidoforms) in the assay. E.g. Sequence, protein, ...
 
 ```{r}
 head(rowData(pe[["peptideRaw"]]))
@@ -163,8 +163,8 @@ colData(pe)
 
 No information is stored yet on the design. 
 
-We have seen in the paper that they used both archeological and modern samples. We can add this information into the colData based on the colnames of the data object.
-In the following analysis, we will investigate whether there are any proteins differentially expressed between these groups and we will check to which bacterial species they belong.
+We have seen in the paper that they used both archaeological and modern samples. We can add this information into the colData based on the colnames of the data object.
+In the following analysis, we will investigate whether there are any proteins differentially expressed between these groups.
 
 ```{r} 
 pe[["peptideRaw"]] %>% colnames
@@ -319,9 +319,6 @@ Some peptides do not have a protein associated, these need to be filtered out in
 
 ```{r}
 pe <- filterFeatures(pe, ~Protein.Groups!="")
-rowData(pe[["peptideNorm"]])$Protein.Groups <- sapply(rowData(pe[["peptideNorm"]])$Protein.Groups, function(x){
-  ifelse(substr(x, 1, 1)==";", substr(x, 2, nchar(x)), x)
-}, USE.NAMES = F)
 ```
 
 
@@ -366,7 +363,7 @@ pe <- msqrob(object = pe, i = "protein", formula = ~group)
 ### Inference
 
 First, we extract the parameter names of the model by looking at the first model. 
-The models are stored in the row data of the assay under the default name msqrobModels. 
+The models are stored in the rowdata of the assay under the default name msqrobModels. 
 
 ```{r}
 getCoef(rowData(pe[["protein"]])$msqrobModels[[2]])
@@ -385,6 +382,7 @@ The mean log2 expression for samples from groupModCalc is '(Intercept)+groupModC
 Hence, the average log2 fold change between Tjærby and ModCalc is modelled using the parameter 'groupModCalc' (Intercept - (Intercept + groupModCalc)) .
 Thus, we assess the contrast 'groupModCalc = 0' (our null hypothesis) with our statistical test.
 In the same way, the average log2 fold change between Tjærby and ModPlaque is modelled using the parameter 'groupModPlaque'.
+Moreover, the average log2 fold change between ModCalc and ModPlaque is modelled using 'groupModCalc - groupModPlaque'.
 
 Let's first investigate whether there are proteins differentially expressed between the Tjærby group and the Modern Calculus group.
 As explained above, to do this, we will test the null hypothesis: groupModCalc=0.
