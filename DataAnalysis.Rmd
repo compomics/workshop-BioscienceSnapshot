@@ -26,10 +26,10 @@ We will work with the same dataset as in the first part of the workshop. In the 
 
 FlashLFQ is a high-speed label-free quantification algorithm. It was developed by Millikin et al. at the university of Wisconsin. In future releases of ionbot, the user will be able to ask for flashLFQ input directly from the ionbot search engine, making it easier to go straight to the quantification step. For now, we will provide you with the FlashLFQ input file based on the ionbot search results. For details on how this was done, see: https://github.com/sdgroeve/ionbot.quant
 
-FlashLFQ has a GUI, can be run from the command line and has a docker image. You can run FlashLFQ command line from within an RMarkDown file by adding a bash chunk. To run it on Linux, you need .NET core. To see all the arguments, run the help parameter.
+FlashLFQ has a GUI, can be run from the command line, has a docker image and can be installed via bioconda (which we have done here). You can run FlashLFQ command line from within an RMarkDown file by adding a bash chunk. To run it on Linux, you need .NET core. To see all the arguments, run the help parameter.
 
 ```{bash}
-dotnet C:/Users/Nina/Documents/FlashLFQ1.2.3/CMD.dll --help
+FlashLFQ --help
 ```
 
 Let's keep it simple for now and try to quantify 2 files from the project. You can find the files here:
@@ -39,8 +39,8 @@ Let's try this out now!
 
 
 ```{bash}
-dotnet C:/Users/Nina/Documents/FlashLFQ1.2.3/CMD.dll --idt "http://genesis.ugent.be/uvpublicdata/workshop-bioscience-snapshot/id_files/flashlfq_input.tsv" --rep "http://genesis.ugent.be/uvpublicdata/workshop-bioscience-snapshot/RAW/" --out "~/FlashLFQ_out/" --ppm 5 --mbr --ath
-``` 
+FlashLFQ --idt ~/Data_part2/flashlfq_input_.tsv --rep ~/Data_part2/RAW/ --out ~/FlashLFQ_out/ --ppm 5 --mbr --ath
+```
 
 While this is running you can find a small explanation of how FlashLFQ works below. See also their GitHub wiki page: https://github.com/smith-chem-wisc/FlashLFQ/wiki/ and their paper: https://doi.org/10.1021/acs.jproteome.7b00608
 
@@ -62,7 +62,7 @@ We have already done the quantification for the entire project for you.
 https://unipept.ugent.be/
 https://doi.org/10.1021/acs.jproteome.8b00716
 
-And the end of the data analysis pipeline you might want to assess from which bacterial species the differential proteins (if any) originate. 
+At the end of the data analysis pipeline you might want to assess from which bacterial species the differential proteins (if any) originate. 
 To identify which peptides belong to which taxa, we will use UniPept.
 Unipept is an open source web application developed at Ghent University that is designed for metaproteomics data analysis with a focus on interactive datavisualizations. Unipept is powered by an index containing all UniProt entries, a tweaked version of the NCBI taxonomy and a custom lowest common ancestor algorithm. This combination enables a blazingly fast biodiversity analysis of large and complex metaproteome samples. The UniPept functionality can be accessed via an API, a desktop app, the website and a set of command line tools.
 
@@ -273,8 +273,8 @@ pe <- normalize(pe,
 
 Now visualise the effect of the normalisation. Why is the normalisation necessary?
 
-```{r fig1, fig.height = 10, fig.width = 7}
-limma::plotDensities(assay(pe[["peptideNorm"]]))
+```{r fig1, fig.height = 6, fig.width = 6}
+limma::plotDensities(assay(pe[["peptideNorm"]]), legend = FALSE)
 ```
 
 
@@ -434,6 +434,9 @@ sigNames <- rowData(pe[["protein"]])$groupModCalc %>%
 heatmap(MSnbase::filterNA(assay(pe[["protein"]])[sigNames, ]), cexCol = 0.7, cexRow = 0.7)
 ```
 
+### Exercise: inference 
+
+If you have completed all of the above and you want an extra challenge, try to find differential proteins between groupModPlaque and groupTjærby and between groupModPlaque and groupModCalc.
 
 # Acknowledgements
 
