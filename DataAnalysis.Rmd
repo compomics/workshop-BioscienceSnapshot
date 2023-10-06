@@ -273,7 +273,7 @@ pe <- normalize(pe,
 
 Now visualise the effect of the normalisation. Why is the normalisation necessary?
 
-```{r fig1, fig.height = 6, fig.width = 6}
+```{r fig2, fig.height = 6, fig.width = 6}
 limma::plotDensities(assay(pe[["peptideNorm"]]), legend = FALSE)
 ```
 
