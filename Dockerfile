@@ -12,6 +12,7 @@ USER ${NB_UID}
 RUN mamba install --quiet --yes 'r-ggplot2' \
     'jupyter-rsession-proxy' \
     'dotnet-sdk' && \
+    mamba install --quiet --yes -c bioconda 'bioconductor-genomeinfodbdata==1.2.6' && \
     mamba install --quiet --yes -c bioconda 'flashlfq' \
     'bioconductor-genomeinfodbdata==1.2.6' \
     'bioconductor-qfeatures' \
