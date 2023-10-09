@@ -401,7 +401,8 @@ We can now assess the proteins that are found as differentially expressed.
 ```{r}
 rowData(pe[["protein"]])$groupModCalc %>%
   #We only look at the proteins that have an adjusted pvalue smaller than 0.05
-  filter(adjPval<0.05) 
+  filter(adjPval<0.05)  %>%
+  head(20)
 ```
 
 ### Plots
